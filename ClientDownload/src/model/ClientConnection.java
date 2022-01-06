@@ -13,6 +13,7 @@ public class ClientConnection {
     public ClientConnection(String ip, int port) {
         this.ip = ip;
         this.port = port;
+        speed = 0.0;
     }
 
     public FileDataResponseType getFilePartFromSocket(int file_id, long start, long end) {
