@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+  <Appenders>
+    <Console name="STDOUT" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d %-5p [%t] %C{2} (%F:%L) - %m%n"/>
+    </Console>
+
+    <File name="FileListServer" fileName="logs/FileListServer.log" append="true">
+      <PatternLayout pattern="%t %-5p %c{2} - %m%n"/>
+    </File>
+  </Appenders>
+
+  <Loggers>
+    <Logger name="org.apache.log4j.xml" level="info"/>
+
+    <Logger name="server" additivity="true">
+	<level value="DEBUG" />
+	<appender-ref ref="FileListServer" />
+    </Logger>
+
+    <Root level="debug">
+      <AppenderRef ref="STDOUT"/>
+    </Root>
+  </Loggers>
+</Configuration>
