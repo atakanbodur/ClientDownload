@@ -11,28 +11,6 @@ import java.util.List;
 import model.*;
 import model.ResponseType.RESPONSE_TYPES;
 
-//	private void getFileData(String ip, int port, int file_id, long start, long end) throws IOException{
-//		InetAddress IPAddress = InetAddress.getByName(ip);
-//        RequestType req=new RequestType(RequestType.REQUEST_TYPES.GET_FILE_DATA, file_id, start, end, null);
-//        byte[] sendData = req.toByteArray();
-//        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length,IPAddress, port);
-//        DatagramSocket dsocket = new DatagramSocket();
-//        dsocket.send(sendPacket);
-//        byte[] receiveData=new byte[ResponseType.MAX_RESPONSE_SIZE];
-//        long maxReceivedByte=-1;
-//        while(maxReceivedByte<end){
-//        	DatagramPacket receivePacket=new DatagramPacket(receiveData, receiveData.length);
-//            dsocket.receive(receivePacket);
-//            FileDataResponseType response=new FileDataResponseType(receivePacket.getData());
-//            loggerManager.getInstance(this.getClass()).debug(response.toString());
-//            if (response.getResponseType()!=RESPONSE_TYPES.GET_FILE_DATA_SUCCESS){
-//            	break;
-//            }
-//            if (response.getEnd_byte()>maxReceivedByte){
-//            	maxReceivedByte=response.getEnd_byte();
-//            };
-//        }
-//	}
 
 public class dummyClient {
     static ClientConnection clientConnection1;
@@ -110,14 +88,9 @@ public class dummyClient {
         for (int i=0; i<partListSize; i++){
             partList.add(new FilePart());
         }
-        //Arrays.asList(new FilePart[( (int)( fileSize / maxResponseSize )+ 1 )]);
 
         assignBytesToFileParts(partList);
 
-//        for (FilePart filePart : partList) {
-//            mainConnection = decideConnection(clientConnection1, clientConnection2);
-//            getFileDataTest(ip,port,file_id,filePart,mainConnection);
-//        }
 
         for (int i=0; i<partList.size(); i++){
             if (i!=partList.size()-1){
@@ -147,6 +120,8 @@ public class dummyClient {
     }
 
     private ClientConnection decideConnection(ClientConnection connection1, ClientConnection connection2){
+        loggerManager.getInstance(this.getClass()).debug(connection1.toString());
+        loggerManager.getInstance(this.getClass()).debug(connection2.toString());
         if (connection1.getSpeed()>connection2.getSpeed())
             return connection1;
         else return connection2;
