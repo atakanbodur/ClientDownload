@@ -16,7 +16,7 @@ public class FileSizeResponseType extends ResponseType {
 	}
 	
 	private void setFileSize(){
-		if (this.getResponseType()==ResponseType.RESPONSE_TYPES.GET_FILE_SIZE_SUCCESS){
+		if (this.getResponseType()== RESPONSE_TYPES.GET_FILE_SIZE_SUCCESS){
 			byte[] data=this.getData();
 			fileSize=0;
 			for(int i=0;i<4;i++){
@@ -45,7 +45,7 @@ public class FileSizeResponseType extends ResponseType {
 		resultBuf.append("\nstart_byte:"+this.getStart_byte());
 		resultBuf.append("\nend_byte:"+this.getEnd_byte());
 		resultBuf.append("\ndata:");
-		if (this.getResponseType()==ResponseType.RESPONSE_TYPES.GET_FILE_SIZE_SUCCESS){
+		if (this.getResponseType()== RESPONSE_TYPES.GET_FILE_SIZE_SUCCESS){
 			resultBuf.append(fileSize);
 		}
 		return resultBuf.toString();

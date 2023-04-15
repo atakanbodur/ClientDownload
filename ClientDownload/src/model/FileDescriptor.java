@@ -1,9 +1,5 @@
 package model;
 
-import java.io.File;
-import java.security.InvalidParameterException;
-import java.util.Arrays;
-
 public class FileDescriptor {
 	private int file_id;
 	private String file_name;

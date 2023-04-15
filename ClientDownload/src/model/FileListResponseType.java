@@ -45,13 +45,13 @@ public class FileListResponseType extends ResponseType {
 	
 	@Override
 	public String toString() {
-		StringBuffer sb=new StringBuffer("response_type:"+this.getResponseType()+"\n");
-		sb.append("file count:"+this.getFile_id()+"\n");
-		sb.append("start_byte:"+this.getStart_byte()+"\n");
-		sb.append("end_byte:"+this.getEnd_byte()+"\n");
-		sb.append("data:");
+		StringBuffer sb=new StringBuffer();
+//		sb.append("\nfile_id:"+this.getFile_id());
+//		sb.append("\nstart_byte:"+this.getStart_byte());
+//		sb.append("\nend_byte:"+this.getEnd_byte());
+		sb.append("\ndata:");
 		for(FileDescriptor file:getFileDescriptors()){
-			sb.append(file.toString()+"\n");
+			sb.append("\n"+file.toString());
 		}
 		return sb.toString();
 	}

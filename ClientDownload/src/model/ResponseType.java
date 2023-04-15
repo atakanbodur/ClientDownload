@@ -28,7 +28,9 @@ public class ResponseType {
 	//4 byte
 	protected long end_byte;
 	protected byte[] data;
-	
+
+	public ResponseType(){}
+
 	public ResponseType(int responseType, int file_id, long start_byte, long end_byte,byte[] data){
 		this.responseType=responseType;
 		this.file_id=file_id;
