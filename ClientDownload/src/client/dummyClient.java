@@ -9,34 +9,18 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.concurrent.*;
 
 
 public class dummyClient {
     static ClientConnection clientConnection1;
     static ClientConnection clientConnection2;
     static File file;
-    static int timesCon1HasBeenUsed = 0;
-    static int timesCon2HasBeenUsed = 0;
     static List<ClientConnection> connections = new ArrayList<>();
     static ClientConnection currentConnection;
+    static Boolean timerExpired = false;
 
-
-    private void sendInvalidRequest(String ip, int port) throws IOException{
-        InetAddress IPAddress = InetAddress.getByName(ip);
-        RequestType req=new RequestType(4, 0, 0, 0, null);
-        byte[] sendData = req.toByteArray();
-        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length,IPAddress, port);
-        DatagramSocket dsocket = new DatagramSocket();
-        dsocket.send(sendPacket);
-        byte[] receiveData=new byte[ResponseType.MAX_RESPONSE_SIZE];
-        DatagramPacket receivePacket=new DatagramPacket(receiveData, receiveData.length);
-        dsocket.receive(receivePacket);
-        ResponseType response=new ResponseType(receivePacket.getData());
-        loggerManager.getInstance(this.getClass()).debug(response.toString());
-    }
 
     private void getFileList(String ip, int port) throws IOException{
         InetAddress IPAddress = InetAddress.getByName(ip);
@@ -50,7 +34,6 @@ public class dummyClient {
         dsocket.receive(receivePacket);
         FileListResponseType response=new FileListResponseType(receivePacket.getData());
         System.out.println(response);
-        //loggerManager.getInstance(this.getClass()).debug(response.toString());
     }
 
     private long getFileSize(String ip, int port, int file_id) throws IOException{
@@ -69,11 +52,10 @@ public class dummyClient {
 
     private void getFileDataTest(int file_id,FilePart filePart, ClientConnection clientConnection) throws IOException{
         long maxReceivedByte=-1;
-
         while(maxReceivedByte<filePart.getEndByte()){
-            FileDataResponseType response = currentConnection.getFilePartFromSocket(file_id,filePart.getStartByte(),filePart.getEndByte());
+            FileDataResponseType response = clientConnection.getFilePartFromSocket(file_id,filePart.getStartByte(),filePart.getEndByte());
             if (response==null) {
-                currentConnection = switchConnection(currentConnection);
+                clientConnection = switchConnection(clientConnection);
             }
             else {
                 if (response.getResponseType()!=RESPONSE_TYPES.GET_FILE_DATA_SUCCESS){
@@ -84,50 +66,77 @@ public class dummyClient {
                     maxReceivedByte=response.getEnd_byte();
                 }
             }
-
         }
     }
 
     private ClientConnection switchConnection(ClientConnection con){
-        if (con.getPort()==clientConnection1.getPort()) return clientConnection2;
-        else return clientConnection1;
+        if (con.getPort()==clientConnection1.getPort())
+            return clientConnection2;
+        else
+            return clientConnection1;
     }
 
     private void startDownload(String ip, int port, int file_id, long end_byte) throws IOException, NoSuchAlgorithmException {
         System.out.println("Starting to download.");
-        long fileSize = getFileSize(ip,port,file_id);
+        long fileSize = getFileSize(ip, port, file_id);
         int maxResponseSize = ResponseType.MAX_DATA_SIZE;
         int partListSize = (int) ((fileSize / maxResponseSize) + 1);
 
-        file = new File((int)fileSize);
+        file = new File((int) fileSize);
         long start = System.currentTimeMillis();
         List<FilePart> partList = new ArrayList<>();
-        for (int i=0; i<partListSize; i++){
+        for (int i = 0; i < partListSize; i++) {
             partList.add(new FilePart());
         }
         assignBytesToFileParts(partList);
 
-        for (int i=0; i<partList.size(); i++){
-            if (i!=partList.size()-1) {
-                currentConnection = decideConnection(clientConnection1, clientConnection2);
+
+        for (int i = 0; i < partList.size(); i++) {
+            Timer timer = new Timer();
+            TimerTask timerTask = new TimerTask() {
+                @Override
+                public void run() {
+                    timerExpired = true;
+                    System.out.println("Timeout occurred. Switching connection...");
+                    currentConnection = switchConnection(currentConnection);
+                }
+            };
+            timer.schedule(timerTask, 500);
+
+            if (i != partList.size() - 1) {
+                if (!timerExpired) {
+                    currentConnection = decideConnection(clientConnection1, clientConnection2);
+                }
                 getFileDataTest(file_id, partList.get(i), currentConnection);
                 partList.get(i).setStatus(checkIfFilePartCorrupted(partList.get(i)) != -1);
-            }
-            else {
+                currentConnection.timesConHasBeenUsed++;
+                timerExpired = false;
+            } else {
                 //last byte[]
-                partList.get(partList.size()-1).setEndByte(end_byte);
-                currentConnection = decideConnection(clientConnection1, clientConnection2);
-                getFileDataTest(file_id,partList.get(partList.size()-1), currentConnection);
-                partList.get(partList.size()-1).setStatus(checkIfFilePartCorrupted(partList.get(partList.size()-1)) != -1);
+
+                partList.get(partList.size() - 1).setEndByte(end_byte);
+                if (!timerExpired) {
+                    currentConnection = decideConnection(clientConnection1, clientConnection2);
+                }
+
+                getFileDataTest(file_id, partList.get(partList.size() - 1), currentConnection);
+                partList.get(partList.size() - 1).setStatus(checkIfFilePartCorrupted(partList.get(partList.size() - 1)) != -1);
+                currentConnection.timesConHasBeenUsed++;
+                timerExpired = false;
             }
+
+            timer.cancel();
         }
-        resendLostPackets(file_id,file,clientConnection1);
+
+        resendLostPackets(file_id, file, decideConnection(clientConnection1, clientConnection2));
 
         sumFileParts(partList, file);
         long end = System.currentTimeMillis();
         System.out.println("MD5 is: " + file.generateMd5Hash());
-        System.out.println("Elapsed time: "+ (end-start)+"ms");
+        System.out.println("Elapsed time: " + (end - start) + "ms");
     }
+
+
 
     private void resendLostPackets(int file_id, File file, ClientConnection clientConnection) throws IOException {
 
@@ -163,15 +172,19 @@ public class dummyClient {
     }
 
     private ClientConnection decideConnection(ClientConnection con1, ClientConnection con2){
-        if (con1.getTimesConHasBeenUsed()-con2.getTimesConHasBeenUsed()>8){
+        System.out.println("con1 speed: " +con1.getSpeed() + " con2:speed: "+con2.getSpeed());
+
+        if (con1.getTimesConHasBeenUsed()-con2.getTimesConHasBeenUsed()>4){
+            System.out.println("Connection 1 has been used too many times, switching to other conn");
             return con2;
         }
-        else if (con2.getTimesConHasBeenUsed()-con1.getTimesConHasBeenUsed()>8){
+        else if (con2.getTimesConHasBeenUsed()-con1.getTimesConHasBeenUsed()>4){
+            System.out.println("Connection 2 has been used too many times, switching to other conn");
             return con1;
         }
 
         //speed
-        else if(con1.getSpeed()>con2.getSpeed()){
+        if(con1.getSpeed()>con2.getSpeed()){
             return con1;
         }
         else if(con2.getSpeed()>con1.getSpeed()){
@@ -232,12 +245,14 @@ public class dummyClient {
                 System.out.println("File size is " + size);
                 inst.startDownload(ip,port1,1 ,size);
             }
-            if (Integer.parseInt(input)==2){
+            else if (Integer.parseInt(input)==2){
                 System.out.println("File 2 has been selected. Getting the file size.");
                 long size=inst.getFileSize(ip,port1,2);
                 System.out.println("File size is " + size);
                 inst.startDownload(ip,port1,2 ,size);
             }
+            else
+                System.out.println("Please enter a valid input");
         }
     }
 }
