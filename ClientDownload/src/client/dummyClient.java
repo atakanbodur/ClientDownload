@@ -7,6 +7,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 
 import model.*;
 import model.ResponseType.RESPONSE_TYPES;
@@ -30,7 +31,7 @@ public class dummyClient {
          loggerManager.getInstance(this.getClass()).debug(response.toString());
 	}
 	
-	private void getFileList(String ip, int port) throws IOException{
+	private int getFileList(String ip, int port) throws IOException{
 		InetAddress IPAddress = InetAddress.getByName(ip); 
         RequestType req=new RequestType(RequestType.REQUEST_TYPES.GET_FILE_LIST, 0, 0, 0, null);
         byte[] sendData = req.toByteArray();
@@ -42,6 +43,7 @@ public class dummyClient {
         dsocket.receive(receivePacket);
         FileListResponseType response=new FileListResponseType(receivePacket.getData());
         loggerManager.getInstance(this.getClass()).debug(response.toString());
+        return response.getFile_id();
 	}
 	
 	private long getFileSize(String ip, int port, int file_id) throws IOException{
@@ -130,24 +132,36 @@ public class dummyClient {
 
 
 	public static void main(String[] args) throws Exception{
-		if (args.length<1){
+		if (args.length<2){//TODO CHECK IF THE ARGUMENT IS CORRECT
 			throw new IllegalArgumentException("ip:port is mandatory");
 		}
-		String[] adr1=args[0].split(":");
-		String ip1=adr1[0];
-		int port1=Integer.valueOf(adr1[1]);
-		dummyClient inst=new dummyClient();
-        clientConnection1 = new ClientConnection(ip1,port1);
-        clientConnection2 = new ClientConnection(ip1,5001);
-	/*	inst.sendInvalidRequest(ip1,port1);
-		inst.getFileList(ip1,port1);
-		inst.getFileSize(ip1,port1,0);
-		long size=inst.getFileSize(ip1,port1,1);
-		inst.getFileData(ip1,port1,0,0,1);
-		inst.getFileData(ip1,port1,1,30,20);*/
-        long size=inst.getFileSize(ip1,port1,1);
-		//inst.getFileData(ip1,port1,1,1,size);
-        //inst.getFileDataTest(ip1,port1,1,1,size);
-        inst.startDownload(ip1,port1,1,size);
+        try{
+            String[] arg = args[0].split(":");
+            String ip1 = arg[0];
+            int port1 = Integer.parseInt(arg[1]);
+            arg = args[1].split(":");
+            String ip2 = arg[0];
+            int port2 = Integer.parseInt(arg[1]);
+
+            dummyClient inst = new dummyClient();
+            clientConnection1 = new ClientConnection(ip1,port1);
+            clientConnection2 = new ClientConnection(ip2,port2);
+            inst.sendInvalidRequest(ip1,port1);
+
+//		    inst.getFileSize(ip1,port1,0);
+//		    long size=inst.getFileSize(ip1,port1,1);
+//		    inst.getFileData(ip1,port1,0,0,1);
+//		    inst.getFileData(ip1,port1,1,30,20);
+            System.out.println("File List: ");
+            int count = inst.getFileList(ip1,port1);
+            Scanner userInput = new Scanner(System.in);
+            System.out.println("Enter a number: ");
+            int choice = userInput.nextInt();
+            long size = inst.getFileSize(ip1,port1,choice);
+            inst.startDownload(ip1,port1,choice,size);
+        }catch (Exception e){
+            e.printStackTrace();
+            throw e;
+        }
 	}
 }
