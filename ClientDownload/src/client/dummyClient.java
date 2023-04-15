@@ -22,7 +22,8 @@ public class dummyClient {
     static Boolean timerExpired = false;
 
 
-    private void getFileList(String ip, int port) throws IOException{
+
+    private FileListResponseType getFileList(String ip, int port) throws IOException{
         InetAddress IPAddress = InetAddress.getByName(ip);
         RequestType req=new RequestType(RequestType.REQUEST_TYPES.GET_FILE_LIST, 0, 0, 0, null);
         byte[] sendData = req.toByteArray();
@@ -33,9 +34,10 @@ public class dummyClient {
         DatagramPacket receivePacket=new DatagramPacket(receiveData, receiveData.length);
         dsocket.receive(receivePacket);
         FileListResponseType response=new FileListResponseType(receivePacket.getData());
-        System.out.println(response);
+        //System.out.println(response);
+        //loggerManager.getInstance(this.getClass()).debug(response.toString());
+        return response;
     }
-
     private long getFileSize(String ip, int port, int file_id) throws IOException{
         InetAddress IPAddress = InetAddress.getByName(ip);
         RequestType req=new RequestType(RequestType.REQUEST_TYPES.GET_FILE_SIZE, file_id, 0, 0, null);
@@ -208,51 +210,53 @@ public class dummyClient {
 
 
     public static void main(String[] args) throws Exception{
+        if(args.length<2){
+            System.out.println("Invalid use should be in the form of: \"my_client server_IP1:5000 server_IP2:5001\"");
+            return;
+        }
 
-        Scanner sc = new Scanner(System.in);
-        String ip = "192.168.0.152";
-        String ports = "5000:5001";
-        dummyClient inst=new dummyClient();
+        String[] arg = args[0].split(":");
+        String ip1 = arg[0];
+        int port1 = Integer.parseInt(arg[1]);
+        arg = args[1].split(":");
+        String ip2 = arg[0];
+        int port2 = Integer.parseInt(arg[1]);
+
+        dummyClient client = new dummyClient();
         String input = "";
-        boolean exit = true;
 
-        System.out.println("Please enter the ip of the server you want to connect to.");
-        //ip = sc.next();
-        System.out.println("Please enter the ports you will use.");
-        System.out.println("e.g -> 5000:5001");
-        //ports = sc.next();
-        String[] adr1=ports.split(":");
-        int port1=Integer.valueOf(adr1[0]);
-        int port2=Integer.valueOf(adr1[1]);
-
-        clientConnection1 = new ClientConnection(ip, port1);
-        clientConnection2 = new ClientConnection(ip, port2);
+        clientConnection1 = new ClientConnection(ip1, port1);
+        clientConnection2 = new ClientConnection(ip2, port2);
         connections.add(clientConnection1);
         connections.add(clientConnection2);
         System.out.println("Available files:");
-        inst.getFileList(ip,port1);
+        FileListResponseType response = client.getFileList(ip1,port1);
+        int fileCount = response.getFile_id();
 
-        while (exit){
-            System.out.println("To exit the application please enter X");
-            System.out.println("Enter a number: ");
-            input = sc.next();
+        Scanner console = new Scanner(System.in);
+        while (true){
+            System.out.println(response);
+            System.out.println("To exit the application please enter x");
+            System.out.print("Enter a number: ");
+            input = console.next();
+
             if (input.equalsIgnoreCase("x")){
-                exit = false;
+                System.out.println("Exiting.");
+                break;
             }
-            else if (Integer.parseInt(input)==1){
-                System.out.println("File 1 has been selected. Getting the file size.");
-                long size=inst.getFileSize(ip,port1,1);
-                System.out.println("File size is " + size);
-                inst.startDownload(ip,port1,1 ,size);
+            try{
+                int choice = Integer.parseInt(input);
+                if(choice>0 && choice<=fileCount){
+                    System.out.println("File "+choice+" has been selected. Getting the file size.");
+                    long size=client.getFileSize(ip1,port1,choice);
+                    System.out.println("File size is " + size);
+                    client.startDownload(ip1,port1,choice ,size);
+                }else{
+                    System.out.println("Invalid number.");
+                }
+            }catch(Exception exception){
+                System.out.println("Invalid number.");
             }
-            else if (Integer.parseInt(input)==2){
-                System.out.println("File 2 has been selected. Getting the file size.");
-                long size=inst.getFileSize(ip,port1,2);
-                System.out.println("File size is " + size);
-                inst.startDownload(ip,port1,2 ,size);
-            }
-            else
-                System.out.println("Please enter a valid input");
         }
     }
 }
